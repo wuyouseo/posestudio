@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>PoseStudio - Fotobeginner 经典人像姿势库与AI骨骼/线稿生成器</title>
+  <link rel="icon" type="image/x-icon" href="./favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="stylesheet" href="./css/style.css?v=20260927_polished">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- 顶部导航栏 -->
+  <header class="header">
+    <div class="logo-area">
+      <img src="./favicon.svg" class="logo-svg-icon" alt="PoseStudio" width="28" height="28">
+      <div class="logo-title">PoseStudio</div>
+      <div class="logo-badge">Fotobeginner 经典人像姿势库</div>
+    </div>
+    
+    <div class="header-center">
+      <span>当前摄影姿势:</span>
+      <div class="current-pose-badge" id="current-pose-badge">回眸望肩 (最易显瘦)</div>
+      <div id="couple-mode-indicator" style="display:none; font-size:11px; background:#6366f1; color:white; padding:2px 8px; border-radius:10px; font-weight:500;">💑 双人情侣模式</div>
+      <button id="reset-current-pose-btn" class="opt-btn" style="padding: 2px 8px; font-size: 11px; margin-left: 6px;" title="还原此姿势至初始形态">
+        ↺ 还原姿态
+      </button>
+    </div>
+
+    <!-- 顶部核心渲染风格切换 -->
+    <div style="display: flex; background: var(--bg-tertiary); padding: 3px; border-radius: 8px; border: 1px solid var(--border-color); gap: 4px;">
+      <button id="view-mode-openpose" class="opt-btn active" style="padding: 4px 12px; font-size: 12px; border-radius: 6px;">
+        🦴 彩色骨骼模式
+      </button>
+      <button id="view-mode-lineart" class="opt-btn" style="padding: 4px 12px; font-size: 12px; border-radius: 6px;">
+        ✏️ 手绘线稿风格
+      </button>
+    </div>
+
+    <div class="header-actions">
+      <button class="opt-btn" id="help-guide-btn" style="padding: 5px 10px; font-size: 12px;" title="查看快捷键与使用技巧">
+        ⌨️ 操作指南
+      </button>
+      <button class="opt-btn" id="save-custom-btn" style="padding: 5px 12px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-color: rgba(59, 130, 246, 0.3);">
+        + 保存自定义姿态
+      </button>
+    </div>
+  </header>
+
+  <!-- 工作区容器 -->
+  <main class="app-container">
+    <!-- 左侧姿势库面板 -->
+    <aside class="sidebar-left">
+      <!-- 模式切换：3D交互姿态 vs 大师原版线稿图库 -->
+      <div class="library-switch-tabs">
+        <button id="tab-switch-3d" class="lib-switch-btn active">🦴 3D 姿势调节库</button>
+        <button id="tab-switch-gallery" class="lib-switch-btn">🎨 大师手绘线稿库 (100张)</button>
+      </div>
+
+      <div class="panel-header">
+        <div class="panel-title">
+          <span id="panel-title-text">摄影姿势预设分类</span>
+          <span id="total-preset-count" style="font-size: 11px; color: #60a5fa;">共 20+ 款姿态</span>
+        </div>
+      </div>
+
+      <!-- 搜索框 -->
+      <div class="search-box-wrapper" style="position: relative;">
+        <input type="text" id="preset-search-input" class="search-input" placeholder="🔍 搜索姿势名称/动作关键字...">
+        <button id="clear-search-btn" class="search-clear-btn" style="display:none;" title="清空搜索">✕</button>
+      </div>
+
+      <!-- 快速筛选热词标签 -->
+      <div class="quick-tags-wrapper" id="quick-tags-wrapper">
+        <span class="quick-tag" data-kw="显瘦">✨ 显瘦</span>
+        <span class="quick-tag" data-kw="坐">🪑 坐姿</span>
+        <span class="quick-tag" data-kw="特写">🔍 特写</span>
+        <span class="quick-tag" data-kw="街拍">🏙️ 街拍</span>
+        <span class="quick-tag" data-kw="相拥">💑 亲昵</span>
+      </div>
+
+      <!-- 分类选项卡 -->
+      <div class="category-tabs" id="category-tabs">
+        <!-- 动态生成分类按钮 -->
+      </div>
+
+      <!-- 姿势卡片列表 -->
+      <div class="preset-list" id="preset-list">
+        <!-- 动态生成姿态卡片 -->
+      </div>
+    </aside>
+
+    <!-- 中央 3D 渲染与取景视口 -->
+    <section class="viewport-area">
+      <div id="canvas-container"></div>
+
+      <!-- 摄影取景框遮罩 -->
+      <div class="frame-overlay" id="frame-overlay">
+        <span class="frame-label" id="frame-label">3:4 人像取景框</span>
+      </div>
+
+      <!-- 视口快捷悬浮栏 -->
+      <div class="viewport-toolbar">
+        <button class="vp-btn" id="reset-cam-btn" title="重置机位至正面平视">
+          <span>🔄</span> 视角复位
+        </button>
+        <div style="width: 1px; height: 14px; background: var(--border-color);"></div>
+        <button class="vp-btn active" id="toggle-silhouette-btn" title="显示/隐藏人体轮廓">
+          <span>👤</span> 人体轮廓
+        </button>
+        <button class="vp-btn active" id="toggle-grid-btn" title="显示/隐藏地面标尺">
+          <span>📏</span> 地面标尺
+        </button>
+        <button class="vp-btn" id="toggle-rotate-btn" title="开启360度环绕旋转展示">
+          <span>🌐</span> 自动环视
+        </button>
+      </div>
+    </section>
+
+    <!-- 右侧摄影控制与导出面板 -->
+    <aside class="sidebar-right">
+      <!-- 0. 摄影师实战指导卡片 -->
+      <div class="control-section" style="border-left: 3px solid #f59e0b; background: rgba(245, 158, 11, 0.06);">
+        <div class="section-title" style="color: #f59e0b; margin-bottom: 6px;">
+          <span>💡 摄影师实战指导 (Cheat Sheet)</span>
+        </div>
+        <div id="photographer-tip-box" style="font-size: 11.5px; color: #fde68a; line-height: 1.5;">
+          下巴与肩膀之间记得留一点空隙；让手部自然下垂或搭在身侧，只露出手侧面最显修长。
+        </div>
+      </div>
+
+      <!-- 1. 摄影机与构图视角 -->
+      <div class="control-section">
+        <div class="section-title">
+          <span>机位与构图</span>
+          <span>视角</span>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">快捷机位</div>
+          <div class="btn-grid-3">
+            <button class="opt-btn active" data-angle="front">正面平视</button>
+            <button class="opt-btn" data-angle="left45">45°半侧</button>
+            <button class="opt-btn" data-angle="left90">正侧90°</button>
+            <button class="opt-btn" data-angle="low">仰拍视角</button>
+            <button class="opt-btn" data-angle="high">俯拍高角</button>
+            <button class="opt-btn" data-angle="back">背面视角</button>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">画幅比例 (取景框)</div>
+          <div class="btn-grid-4">
+            <button class="opt-btn active" data-aspect="3:4">3:4 人像</button>
+            <button class="opt-btn" data-aspect="9:16">9:16 全屏</button>
+            <button class="opt-btn" data-aspect="1:1">1:1 方形</button>
+            <button class="opt-btn" data-aspect="2:3">2:3 胶片</button>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">镜头焦段模拟</div>
+          <div class="btn-grid-3">
+            <button class="opt-btn" data-focal="28">28mm 广角</button>
+            <button class="opt-btn active" data-focal="50">50mm 标准</button>
+            <button class="opt-btn" data-focal="85">85mm 长焦</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 人体轮廓与体态控制 -->
+      <div class="control-section">
+        <div class="section-title">
+          <span>人体立体轮廓</span>
+          <span style="font-size: 11px; color: #3b82f6;">3D 体量</span>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <span style="font-size: 12px; color: var(--text-secondary);">启用半透明轮廓</span>
+          <input type="checkbox" id="checkbox-silhouette" checked style="accent-color: var(--accent-color); cursor: pointer; width: 16px; height: 16px;">
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span>轮廓透明度</span>
+            <span id="silhouette-opacity-val">55%</span>
+          </div>
+          <input type="range" class="custom-range" id="silhouette-opacity-slider" min="0.1" max="1.0" step="0.05" value="0.55">
+        </div>
+      </div>
+
+      <!-- 3. 关节微调面板 -->
+      <div class="control-section" id="joint-editor" style="display: none;">
+        <div class="section-title">
+          <span>关节微调: <span id="selected-joint-name" class="joint-name-tag">右肩</span></span>
+          <span style="font-size: 10px; color: #3b82f6;">拖动滑块调整</span>
+        </div>
+        <div class="joint-editor-box">
+          <div class="coordinate-row">
+            <span class="coord-label">X:</span>
+            <input type="range" class="custom-range" id="joint-x" min="-1.8" max="1.8" step="0.01">
+            <span id="val-x" style="width: 32px; font-size: 11px; color: var(--text-muted);">-0.20</span>
+          </div>
+          <div class="coordinate-row">
+            <span class="coord-label">Y:</span>
+            <input type="range" class="custom-range" id="joint-y" min="0" max="2.0" step="0.01">
+            <span id="val-y" style="width: 32px; font-size: 11px; color: var(--text-muted);">1.45</span>
+          </div>
+          <div class="coordinate-row">
+            <span class="coord-label">Z:</span>
+            <input type="range" class="custom-range" id="joint-z" min="-1.8" max="1.8" step="0.01">
+            <span id="val-z" style="width: 32px; font-size: 11px; color: var(--text-muted);">0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. 摄影提示词与生图参考 -->
+      <div class="control-section">
+        <div class="section-title">
+          <span>生图提示词参考 (Prompt)</span>
+          <span style="font-size: 11px; color: var(--text-muted);">配套机位词</span>
+        </div>
+        <div class="prompt-box" id="prompt-box">
+          portrait of a beautiful woman looking back over shoulder, side view, natural lighting, sharp focus, 85mm lens
+        </div>
+        <button class="copy-btn" id="copy-prompt-btn">📋 复制英文提示词</button>
+      </div>
+
+      <!-- 5. ControlNet 导出 -->
+      <div class="control-section export-card">
+        <div class="section-title">
+          <span>姿态参考图导出</span>
+          <span style="font-size: 11px; color: #10b981;">● OpenPose & Lineart</span>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">导出图像模式</div>
+          <select id="export-mode-select" class="opt-btn" style="width: 100%; text-align: left; padding: 8px 10px;">
+            <optgroup label="── ✏️ ControlNet Lineart 线稿 ──">
+              <option value="lineart_white">手绘线稿: 纯白底黑线 (Lineart / Sketch 推荐)</option>
+              <option value="lineart_black">手绘线稿: 纯黑底白线 (Canny / Softedge 专用)</option>
+            </optgroup>
+            <optgroup label="── 🦴 ControlNet OpenPose 骨骼 ──">
+              <option value="bones_only">标准 OpenPose 彩色骨骼 (ControlNet 专用)</option>
+              <option value="composite">骨骼 + 人体轮廓复合图 (推荐垫图/透视参考)</option>
+              <option value="silhouette_only">纯人体剪影轮廓图 (白色Mask蒙版/线稿提取)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">导出分辨率</div>
+          <select id="res-select" class="opt-btn" style="width: 100%; text-align: left; padding: 8px 10px;">
+            <option value="768x1024" selected>768 × 1024 (经典人像 3:4 / SD1.5 & SDXL)</option>
+            <option value="896x1152">896 × 1152 (SDXL 高清精细 3:4)</option>
+            <option value="1024x1024">1024 × 1024 (1:1 方形大片 / Flux)</option>
+            <option value="720x1280">720 × 1280 (9:16 移动端手机壁纸)</option>
+            <option value="1024x1536">1024 × 1536 (2:3 胶片全画幅高分)</option>
+          </select>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">背景填充</div>
+          <select id="bg-type-select" class="opt-btn" style="width: 100%; text-align: left; padding: 8px 10px;">
+            <option value="default" selected>模式推荐背景 (线稿白底/骨骼黑底)</option>
+            <option value="transparent">透明背景 (PNG)</option>
+          </select>
+        </div>
+
+        <button class="export-btn-primary" id="export-btn">
+          <span>⬇️</span> 下载姿态参考图 (PNG)
+        </button>
+        <div style="font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.4;">
+          支持一键导出高质量 Lineart 手绘线稿与 OpenPose 骨骼图
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 大师手绘线稿高清预览与下载弹窗 (Lineart Lightbox Modal) -->
+  <div id="lineart-modal" class="lineart-modal-overlay" style="display: none;">
+    <div class="lineart-modal-backdrop" id="lineart-modal-backdrop"></div>
+    <div class="lineart-modal-container">
+      <!-- 弹窗顶部控制栏 -->
+      <div class="lineart-modal-header">
+        <div class="lineart-modal-title-box">
+          <span class="lineart-modal-badge" id="modal-cat-badge">👩 女生篇 (I)</span>
+          <h3 class="lineart-modal-title" id="modal-pose-title">回眸微笑 (自然显瘦)</h3>
+          <span class="lineart-modal-counter" id="modal-counter">1 / 21</span>
+        </div>
+        <div class="lineart-modal-actions-top">
+          <button class="modal-close-btn" id="modal-close-btn" title="关闭预览 (ESC)">✕</button>
+        </div>
+      </div>
+
+      <!-- 弹窗主体区 (大图展示 + 侧边拍摄指南) -->
+      <div class="lineart-modal-body">
+        <!-- 左侧/中央大图视窗 -->
+        <div class="lineart-modal-viewer">
+          <button class="modal-nav-btn prev-btn" id="modal-prev-btn" title="上一张 (← 键盘左键)">‹</button>
+          
+          <div class="lineart-preview-paper" id="modal-image-wrapper">
+            <img src="" id="modal-preview-img" alt="手绘线稿大图预览" class="lineart-preview-img">
+          </div>
+
+          <button class="modal-nav-btn next-btn" id="modal-next-btn" title="下一张 (→ 键盘右键)">›</button>
+        </div>
+
+        <!-- 右侧构图说明与快速下载栏 -->
+        <div class="lineart-modal-sidebar">
+          <div class="modal-sidebar-section">
+            <div class="section-label">📸 摄影师构图指导与姿态要领</div>
+            <div class="modal-photographer-tip" id="modal-tip-text">
+              头部微向后回眸，肩膀略侧对镜头，避免平视死板。
+            </div>
+          </div>
+
+          <div class="modal-sidebar-section">
+            <div class="section-label">🤖 SD / Midjourney 垫图提示词</div>
+            <div class="prompt-box" id="modal-prompt-box" style="max-height: 85px; font-size: 11px;">
+              minimalist pencil lineart, clean anatomical contour sketch...
+            </div>
+            <button class="copy-btn" id="modal-copy-prompt-btn" style="margin-top: 6px;">
+              <span>📋</span> 复制 AI 提示词
+            </button>
+          </div>
+
+          <div class="modal-sidebar-section" style="margin-top: auto; padding-top: 10px;">
+            <button class="export-btn-primary" id="modal-download-btn" style="width: 100%;">
+              <span>⬇️</span> 下载高清线稿原图 (PNG)
+            </button>
+            <button class="opt-btn" id="modal-sync-3d-btn" style="width: 100%; margin-top: 8px; justify-content: center; padding: 9px; font-size: 12px;">
+              <span>🔄</span> 在主画布加载此姿势 3D 骨架
+            </button>
+            <div style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 8px;">
+              支持键盘：[←] 上一张 / [→] 下一张 / [ESC] 退出
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 全局轻量 Toast 气泡通知容器 -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- 使用操作指南弹窗 (Guide Modal) -->
+  <div id="guide-modal" class="lineart-modal-overlay" style="display: none;">
+    <div class="lineart-modal-backdrop" id="guide-modal-backdrop"></div>
+    <div class="lineart-modal-container" style="max-width: 680px; height: auto; max-height: 85vh;">
+      <div class="lineart-modal-header">
+        <div class="lineart-modal-title-box">
+          <span class="lineart-modal-badge" style="background: #10b981;">💡 指南</span>
+          <h3 class="lineart-modal-title">PoseStudio 摄影姿势库与 AI 垫图使用指南</h3>
+        </div>
+        <button class="modal-close-btn" id="guide-modal-close-btn" title="关闭 (ESC)">✕</button>
+      </div>
+      <div style="padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; color: #cbd5e1; font-size: 13px; line-height: 1.6;">
+        <div style="background: #1e2433; padding: 14px; border-radius: 8px; border-left: 3px solid #3b82f6;">
+          <strong style="color: #60a5fa;">📸 摄影实战参考：</strong><br>
+          本工具基于 Fotobeginner 经典摄影教程深度打造，覆盖女生、男生、儿童、情侣四大主题共 36 款精编 3D 姿态与 101 张手绘原稿。实拍中可直接作为构图参考指导模特摆姿。
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="background: #1a1e29; padding: 12px; border-radius: 8px; border: 1px solid #2d3343;">
+            <div style="color: #f1f5f9; font-weight: 600; margin-bottom: 6px;">🖱️ 3D 画布交互</div>
+            <ul style="padding-left: 18px; margin: 0; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px;">
+              <li><strong>左键按住拖拽</strong>：任意 360° 旋转机位视角</li>
+              <li><strong>右键按住拖拽</strong>：平移相机位置</li>
+              <li><strong>鼠标滚轮</strong>：平滑推拉放大与缩小</li>
+              <li><strong>点击彩色关节球</strong>：右侧微调 X/Y/Z 空间坐标</li>
+            </ul>
+          </div>
+
+          <div style="background: #1a1e29; padding: 12px; border-radius: 8px; border: 1px solid #2d3343;">
+            <div style="color: #f1f5f9; font-weight: 600; margin-bottom: 6px;">⌨️ 快捷操作与翻页</div>
+            <ul style="padding-left: 18px; margin: 0; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px;">
+              <li><strong>手绘图库大图预览</strong>：点击任意卡片查看大图</li>
+              <li><strong>[←] 与 [→] 方向键</strong>：在弹窗中快速切换上下张</li>
+              <li><strong>[ESC] 键</strong>：快速退出预览弹窗</li>
+              <li><strong>↺ 还原姿态</strong>：随时一键复位至标准预设</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="background: #1a1e29; padding: 12px; border-radius: 8px; border: 1px solid #2d3343;">
+          <div style="color: #f1f5f9; font-weight: 600; margin-bottom: 6px;">🤖 AI 绘画 ControlNet 垫图建议</div>
+          <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">
+            • <strong>OpenPose</strong>：使用「标准 OpenPose 彩色骨骼」模式，黑底导出，直接喂入 ControlNet OpenPose 模型。<br>
+            • <strong>Lineart / Sketch</strong>：使用「手绘线稿模式」或直接下载「大师线稿图库」，喂入 ControlNet Lineart 或 Canny 提取精准轮廓。<br>
+            • <strong>SDXL / Flux 推荐比例</strong>：选择 3:4 (768×1024) 或 2:3 (1024×1536)，配合一键复制的英文提示词效果最佳。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/app.js?v=20260927_polished"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e2433"/>
+      <stop offset="100%" stop-color="#0f121a"/>
+    </linearGradient>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="50%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- 外边框底板 -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#bgGrad)" stroke="#3b82f6" stroke-width="2"/>
+
+  <!-- 镜头光圈外环 -->
+  <circle cx="32" cy="32" r="22" fill="none" stroke="url(#ringGrad)" stroke-width="2.5" filter="url(#glow)"/>
+  <circle cx="32" cy="32" r="17" fill="#181d28" stroke="#60a5fa" stroke-width="1" stroke-dasharray="3 2"/>
+
+  <!-- 镜头右上反光斑 -->
+  <circle cx="45" cy="19" r="2" fill="#ffffff" opacity="0.8"/>
+
+  <!-- 人体姿态骨架 (OpenPose 艺术化) -->
+  <!-- 头部 -->
+  <circle cx="32" cy="24" r="3.5" fill="#f43f5e" filter="url(#glow)"/>
+  <!-- 脊柱 -->
+  <line x1="32" y1="28" x2="32" y2="37" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+  <!-- 双肩 -->
+  <line x1="26" y1="29.5" x2="38" y2="29.5" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/>
+  <!-- 叉腰右臂 -->
+  <polyline points="26,29.5 22,34 29,37" fill="none" stroke="#eab308" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 垂坠左臂 -->
+  <polyline points="38,29.5 41,34 38,39" fill="none" stroke="#10b981" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 支撑左腿 -->
+  <polyline points="32,37 35,43 36,49" fill="none" stroke="#a855f7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 优美曲右腿 -->
+  <polyline points="32,37 28,42 27,48" fill="none" stroke="#06b6d4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

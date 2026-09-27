@@ -1,0 +1,21 @@
+# Netlify Headers 规范文件
+/*
+  X-Frame-Options: DENY
+  X-XSS-Protection: 1; mode=block
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Access-Control-Allow-Origin: *
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/favicon.*
+  Cache-Control: public, max-age=2592000
+
+/js/*
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: public, max-age=86400
+
+/css/*
+  Content-Type: text/css; charset=utf-8
+  Cache-Control: public, max-age=86400
