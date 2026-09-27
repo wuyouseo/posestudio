@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { SkeletonModel } from './skeleton_model.js?v=20260927_polished';
-import { CameraManager } from './camera_controls.js?v=20260927_polished';
-import { OpenPoseExporter } from './exporter.js?v=20260927_polished';
-import { POSE_CATEGORIES, POSE_PRESETS } from './pose_presets.js?v=20260927_polished';
-import { LINEART_GALLERY_DATA } from './lineart_gallery_data.js?v=20260927_polished';
+import { SkeletonModel } from './skeleton_model.js?v=20260927_camera_fit';
+import { CameraManager } from './camera_controls.js?v=20260927_camera_fit';
+import { OpenPoseExporter } from './exporter.js?v=20260927_camera_fit';
+import { POSE_CATEGORIES, POSE_PRESETS } from './pose_presets.js?v=20260927_camera_fit';
+import { LINEART_GALLERY_DATA } from './lineart_gallery_data.js?v=20260927_camera_fit';
 
 class PoseStudioApp {
   constructor() {
@@ -129,21 +129,22 @@ class PoseStudioApp {
     rimLight.position.set(0, 3, -4);
     this.scene.add(rimLight);
 
-    // 相机与渲染器
+    // 相机与渲染器 (50mm 镜头在 4.8m 处，完美容纳 1.76m 全身人像并具备黄金比例空间)
     const rect = this.container.getBoundingClientRect();
     this.camera = new THREE.PerspectiveCamera(27.0, rect.width / rect.height, 0.1, 50);
-    this.camera.position.set(0, 1.1, 3.2);
+    this.camera.position.set(0, 1.05, 4.8);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     this.renderer.setSize(rect.width, rect.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.container.appendChild(this.renderer.domElement);
 
-    // 轨道控制
+    // 轨道控制 (目标设在人体几何中心 y=0.90m)
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
     this.controls.maxPolarAngle = Math.PI * 0.95;
+    this.controls.target.set(0, 0.90, 0);
 
     // 骨骼与立体轮廓模型系统
     this.skeleton = new SkeletonModel(this.scene);

@@ -11,8 +11,8 @@ export class CameraManager {
     this.controls = controls;
     this.container = viewportContainer;
 
-    // 默认人像中心高度 (大约在胸口-盆骨中间 1.0m 高度)
-    this.targetCenter = new THREE.Vector3(0, 1.0, 0);
+    // 默认人像中心高度 (人体骨骼几何与视觉黄金中心约 0.90m)
+    this.targetCenter = new THREE.Vector3(0, 0.90, 0);
     this.controls.target.copy(this.targetCenter);
 
     // 焦段映射 (焦距 mm -> 对应的相机 FOV)
@@ -44,35 +44,37 @@ export class CameraManager {
    * @param {'front'|'left45'|'right45'|'left90'|'low'|'high'|'back'} angleType 
    */
   setAnglePreset(angleType) {
-    const dist = 3.2; // 默认观察距离
+    // 默认观察距离：经光学公式推算，50mm标准镜头下 4.8m 距离可完美容纳 1.76m 全身人像
+    // 并在 3:4 / 9:16 取景框内留有自然的头顶透气余量 (Headroom) 与脚底落地区域 (Footroom)
+    const dist = 4.8;
     const center = this.targetCenter;
 
     let targetCamPos = new THREE.Vector3();
 
     switch (angleType) {
       case 'front': // 正面平视
-        targetCamPos.set(0, center.y + 0.1, dist);
+        targetCamPos.set(0, center.y + 0.15, dist);
         break;
       case 'left45': // 摄影师视角的左前方 45 度
-        targetCamPos.set(-dist * 0.707, center.y + 0.1, dist * 0.707);
+        targetCamPos.set(-dist * 0.707, center.y + 0.15, dist * 0.707);
         break;
       case 'right45': // 摄影师视角的右前方 45 度
-        targetCamPos.set(dist * 0.707, center.y + 0.1, dist * 0.707);
+        targetCamPos.set(dist * 0.707, center.y + 0.15, dist * 0.707);
         break;
       case 'left90': // 正侧面
-        targetCamPos.set(-dist, center.y + 0.1, 0);
+        targetCamPos.set(-dist, center.y + 0.15, 0);
         break;
       case 'low': // 仰拍 (低机位向上看，显腿长、张力感)
-        targetCamPos.set(0, 0.25, dist * 0.85);
+        targetCamPos.set(0, 0.35, dist * 0.9);
         break;
       case 'high': // 俯拍 (高机位俯视，情绪感、面部与眼神)
-        targetCamPos.set(0, 2.2, dist * 0.75);
+        targetCamPos.set(0, 2.4, dist * 0.85);
         break;
       case 'back': // 背部机位
-        targetCamPos.set(0, center.y + 0.1, -dist);
+        targetCamPos.set(0, center.y + 0.15, -dist);
         break;
       default:
-        targetCamPos.set(0, center.y, dist);
+        targetCamPos.set(0, center.y + 0.15, dist);
     }
 
     this.camera.position.copy(targetCamPos);
