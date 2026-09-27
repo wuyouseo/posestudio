@@ -11,7 +11,7 @@
 [![ControlNet](https://img.shields.io/badge/ControlNet-OpenPose%20%7C%20Lineart-success.svg)](https://github.com/lllyasviel/ControlNet)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./)
 
-[功能特性](#-核心功能亮点) • [姿态目录](#-36-款精编-3d-姿态库目录) • [手绘图库](#-101-张大师经典手绘线稿图库) • [快速启动](#-快速启动指南) • [AI生图工作流](#-controlnet--ai-绘画实战工作流)
+[界面预览](#-运行界面预览-screenshots) • [功能特性](#-核心功能亮点) • [姿态目录](#-36-款精编-3d-姿态库目录) • [手绘图库](#-101-张大师经典手绘线稿图库) • [快速启动](#-快速启动指南) • [AI生图工作流](#-controlnet--ai-绘画实战工作流)
 
 </div>
 
@@ -22,6 +22,26 @@
 **PoseStudio** 是一个轻量级、免安装、基于现代 Web 技术的 3D 摄影人像姿态与线条生成工具。
 
 本工具深度融合了知名摄影教学系列 **Fotobeginner（摄影入门）** 的全套经典 21 人像姿势精粹，收录 **101 张大师手绘原稿** 与 **36 款高精度 3D 交互姿态**（涵盖女生、男生、儿童与情侣）。它既能作为摄影师在日常实拍中指导模特摆姿的速查手册，也是 AI 绘画（Stable Diffusion、ComfyUI、WebUI、Flux、Midjourney）创作者导出精准 **ControlNet OpenPose 彩色骨骼图** 与 **Lineart 手绘线稿参考图** 的高效利器。
+
+---
+
+## 🖼️ 运行界面预览 (Screenshots)
+
+<div align="center">
+
+### 1. 3D 姿势调节与骨骼控制台
+*36 款精编 3D 摄影姿势，支持自由多机位、定焦模拟、画幅取景框与人体立体轮廓透视*
+
+![PoseStudio 3D 姿势调节库](./assets/screenshots/preview-3d-studio.png)
+
+<br/>
+
+### 2. 101 张 Fotobeginner 大师手绘线稿图库
+*大师经典手绘素描原稿，自带摄影构图解析要领、大图 Lightbox 沉浸预览、键盘快速翻页与一键下载*
+
+![PoseStudio 大师手绘线稿库](./assets/screenshots/preview-lineart-gallery.png)
+
+</div>
 
 ---
 
