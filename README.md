@@ -6,18 +6,21 @@
 
 ### 专为摄影师摆姿指导与 AI 艺术创作者打造的轻量级 3D 人像姿态资产工作站
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-zishi3d.netlify.app-00C7B7?style=flat&logo=netlify&logoColor=white)](https://zishi3d.netlify.app/)
 [![Version](https://img.shields.io/badge/version-2.5.0-blue.svg)](./)
 [![Three.js](https://img.shields.io/badge/Three.js-0.160.0-black.svg)](https://threejs.org/)
 [![ControlNet](https://img.shields.io/badge/ControlNet-OpenPose%20%7C%20Lineart-success.svg)](https://github.com/lllyasviel/ControlNet)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./)
 
-[界面预览](#-运行界面预览-screenshots) • [功能特性](#-核心功能亮点) • [姿态目录](#-36-款精编-3d-姿态库目录) • [手绘图库](#-101-张大师经典手绘线稿图库) • [快速启动](#-快速启动指南) • [AI生图工作流](#-controlnet--ai-绘画实战工作流)
+[🌐 在线演示体验 (Live Demo)](https://zishi3d.netlify.app/) • [界面预览](#-运行界面预览-screenshots) • [功能特性](#-核心功能亮点) • [姿态目录](#-36-款精编-3d-姿态库目录) • [手绘图库](#-101-张大师经典手绘线稿图库) • [快速启动](#-快速启动指南) • [AI生图工作流](#-controlnet--ai-绘画实战工作流)
 
 </div>
 
 ---
 
 ## 📖 项目简介
+
+> 🚀 **在线演示站点**：**[https://zishi3d.netlify.app/](https://zishi3d.netlify.app/)**（免安装即开即用，支持手机与电脑端流畅运行）
 
 **PoseStudio** 是一个轻量级、免安装、基于现代 Web 技术的 3D 摄影人像姿态与线条生成工具。
 
@@ -138,9 +141,13 @@
 
 ## 🚀 快速启动指南
 
-本项目为纯前端原生架构，无需安装 Node.js、npm 等复杂环境，**开箱即用**。
+### 方式 0：🌐 在线直接体验（免安装免下载，推荐）
+直接在任意手机或电脑浏览器中打开：
+👉 **[https://zishi3d.netlify.app/](https://zishi3d.netlify.app/)**
 
-### 方式 A：Windows 一键快速启动（推荐）
+---
+
+### 方式 A：Windows 一键本地启动
 在项目根目录下，直接双击运行：
 ```cmd
 启动姿势库.bat
@@ -245,19 +252,10 @@ e:/ai-code/Antigravity/9-27/
 
 ---
 
-## 💖 致谢与参考来源
-
-本项目的人像摆姿体系与大师手绘原图素材源自知名专业摄影教育站点 **Fotobeginner（摄影入门）** 的人像拍摄经典教程：
-- [女生篇 (I) 21 种姿势](https://www.fotobeginner.com/7552/21-pose-for-portrait/)
-- [女生篇 (II) 21 种姿势](https://www.fotobeginner.com/14882/21-pose-for-portrait-female-ii/)
-- [男生篇 21 种姿势](https://www.fotobeginner.com/14064/21-pose-for-portrait-men/)
-- [儿童篇 21 种姿势](https://www.fotobeginner.com/7587/21-pose-for-children/)
-- [情侣篇 21 种姿势](https://www.fotobeginner.com/14705/21-pose-for-couples/)
-
-感谢 Fotobeginner 为广大摄影爱好者提供的宝贵构图知识与艺术手绘资料！
-
----
-
 <div align="center">
-<strong>PoseStudio · 让每一次快门与生成都极具美感</strong>
+
+### 📸 PoseStudio · 让每一次快门与生成都极具美感
+
+**在线演示体验**：[https://zishi3d.netlify.app/](https://zishi3d.netlify.app/)
+
 </div>
