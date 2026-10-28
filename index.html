@@ -31,7 +31,11 @@
     <div class="header-center">
       <span>当前摄影姿势:</span>
       <div class="current-pose-badge" id="current-pose-badge">回眸望肩 (最易显瘦)</div>
-      <div id="couple-mode-indicator" style="display:none; font-size:11px; background:#6366f1; color:white; padding:2px 8px; border-radius:10px; font-weight:500;">💑 双人情侣模式</div>
+      <div id="couple-mode-indicator" style="display:none; align-items: center; gap: 4px; background: rgba(99, 102, 241, 0.15); padding: 2px 6px; border-radius: 14px; border: 1px solid rgba(99, 102, 241, 0.35);">
+        <span style="font-size: 11px; color: #a5b4fc; font-weight: 500;">💑 双人:</span>
+        <button id="couple-btn-personA" class="opt-btn active" style="padding: 2px 7px; font-size: 10.5px; border-radius: 10px;">👩 主模特</button>
+        <button id="couple-btn-personB" class="opt-btn" style="padding: 2px 7px; font-size: 10.5px; border-radius: 10px;">👨 伴侣</button>
+      </div>
       <button id="reset-current-pose-btn" class="opt-btn" style="padding: 2px 8px; font-size: 11px; margin-left: 6px;" title="还原此姿势至初始形态">
         ↺ 还原姿态
       </button>
@@ -50,6 +54,9 @@
     <div class="header-actions">
       <button class="opt-btn" id="help-guide-btn" style="padding: 5px 10px; font-size: 12px;" title="查看快捷键与使用技巧">
         ⌨️ 操作指南
+      </button>
+      <button class="opt-btn" id="export-pose-json-btn" style="padding: 5px 10px; font-size: 12px;" title="导出当前骨架坐标数据文件 (JSON)">
+        📥 导出 JSON
       </button>
       <button class="opt-btn" id="save-custom-btn" style="padding: 5px 12px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-color: rgba(59, 130, 246, 0.3);">
         + 保存自定义姿态
@@ -231,6 +238,14 @@
             <span id="val-z" style="width: 32px; font-size: 11px; color: var(--text-muted);">0.00</span>
           </div>
         </div>
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button class="opt-btn" id="btn-mirror-joint" style="flex: 1; padding: 6px; font-size: 11px; justify-content: center;" title="将此关节对称镜像到另一侧">
+            <span>🪞</span> 对称镜像
+          </button>
+          <button class="opt-btn" id="btn-reset-single-joint" style="flex: 1; padding: 6px; font-size: 11px; justify-content: center;" title="将此关节恢复到预设初始位置">
+            <span>↺</span> 复位关节
+          </button>
+        </div>
       </div>
 
       <!-- 4. 摄影提示词与生图参考 -->
@@ -322,6 +337,15 @@
             <img src="" id="modal-preview-img" alt="手绘线稿大图预览" class="lineart-preview-img">
           </div>
 
+          <!-- 缩放工具栏 -->
+          <div class="lineart-zoom-toolbar" style="position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: rgba(15, 23, 42, 0.78); backdrop-filter: blur(8px); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.15); z-index: 10; font-size: 11px; color: #e2e8f0;">
+            <button class="opt-btn" id="modal-zoom-out-btn" style="padding: 2px 6px; font-size: 12px;">−</button>
+            <span id="modal-zoom-level" style="min-width: 38px; text-align: center;">100%</span>
+            <button class="opt-btn" id="modal-zoom-in-btn" style="padding: 2px 6px; font-size: 12px;">+</button>
+            <button class="opt-btn" id="modal-zoom-reset-btn" style="padding: 2px 8px; font-size: 11px;">复位</button>
+            <span style="color: var(--text-muted); font-size: 10px;">(支持滚轮缩放/双击复位)</span>
+          </div>
+
           <button class="modal-nav-btn next-btn" id="modal-next-btn" title="下一张 (→ 键盘右键)">›</button>
         </div>
 
@@ -392,12 +416,13 @@
           </div>
 
           <div style="background: #1a1e29; padding: 12px; border-radius: 8px; border: 1px solid #2d3343;">
-            <div style="color: #f1f5f9; font-weight: 600; margin-bottom: 6px;">⌨️ 快捷操作与翻页</div>
+            <div style="color: #f1f5f9; font-weight: 600; margin-bottom: 6px;">⌨️ 快捷操作与按键</div>
             <ul style="padding-left: 18px; margin: 0; font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px;">
-              <li><strong>手绘图库大图预览</strong>：点击任意卡片查看大图</li>
-              <li><strong>[←] 与 [→] 方向键</strong>：在弹窗中快速切换上下张</li>
-              <li><strong>[ESC] 键</strong>：快速退出预览弹窗</li>
-              <li><strong>↺ 还原姿态</strong>：随时一键复位至标准预设</li>
+              <li><strong>[Space 空格键]</strong>：启停 360° 自动环视</li>
+              <li><strong>[F 键]</strong>：视角复位至正面平视</li>
+              <li><strong>[R 键]</strong>：还原当前姿势初始骨架</li>
+              <li><strong>[←] / [→] 方向键</strong>：线稿大图上下张翻页</li>
+              <li><strong>[ESC 键]</strong>：快速退出所有弹窗</li>
             </ul>
           </div>
         </div>

@@ -16,6 +16,9 @@ class PoseStudioApp {
     this.viewMode = 'openpose'; // 'openpose' | 'lineart'
     this.libraryTab = '3d';     // '3d' | 'gallery'
     this.galleryCategory = 'female1'; // 'female1' | 'female2' | 'men' | 'children' | 'couples'
+    this.currentAngle = 'front';
+    this.currentFocal = 50;
+    this.currentAspect = '3:4';
 
     this.initDOM();
     this.loadCustomPresets();
@@ -102,6 +105,23 @@ class PoseStudioApp {
     this.guideModal = document.getElementById('guide-modal');
     this.guideModalBackdrop = document.getElementById('guide-modal-backdrop');
     this.guideModalCloseBtn = document.getElementById('guide-modal-close-btn');
+
+    // Lightbox 大图滚轮无级缩放
+    this.modalZoom = 1.0;
+    this.modalImgWrapper = document.getElementById('modal-image-wrapper');
+    this.modalZoomLevel = document.getElementById('modal-zoom-level');
+    this.modalZoomInBtn = document.getElementById('modal-zoom-in-btn');
+    this.modalZoomOutBtn = document.getElementById('modal-zoom-out-btn');
+    this.modalZoomResetBtn = document.getElementById('modal-zoom-reset-btn');
+
+    // 关节镜像与复位
+    this.btnMirrorJoint = document.getElementById('btn-mirror-joint');
+    this.btnResetSingleJoint = document.getElementById('btn-reset-single-joint');
+    this.btnExportPoseJson = document.getElementById('export-pose-json-btn');
+
+    // 双人模式快捷切换
+    this.coupleBtnPersonA = document.getElementById('couple-btn-personA');
+    this.coupleBtnPersonB = document.getElementById('couple-btn-personB');
   }
 
   initThree() {
@@ -311,8 +331,36 @@ class PoseStudioApp {
       card.addEventListener('click', () => {
         this.selectPose(preset.id, true);
       });
+
+      if (preset.isCustom) {
+        const delBtn = document.createElement('button');
+        delBtn.innerHTML = '🗑️';
+        delBtn.title = '删除此自定义姿势';
+        delBtn.style.cssText = 'background:none; border:none; cursor:pointer; font-size:12px; opacity:0.65; margin-left:6px; padding:0;';
+        delBtn.addEventListener('mouseenter', () => delBtn.style.opacity = '1.0');
+        delBtn.addEventListener('mouseleave', () => delBtn.style.opacity = '0.65');
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm(`确定要从本地预设库中删除姿势【${preset.name}】吗？`)) {
+            this.deleteCustomPose(preset.id);
+          }
+        });
+        card.querySelector('.card-top-bar > div')?.appendChild(delBtn);
+      }
+
       this.presetList.appendChild(card);
     });
+  }
+
+  deleteCustomPose(id) {
+    this.customPresets = this.customPresets.filter(p => p.id !== id);
+    this.allPresets = this.allPresets.filter(p => p.id !== id);
+    localStorage.setItem('photographer_custom_poses_v2', JSON.stringify(this.customPresets));
+    this.initPresetsUI();
+    if (this.currentPreset?.id === id) {
+      this.selectPose(POSE_PRESETS[0].id, false);
+    }
+    this.showToast('🗑️ 自定义姿态已成功删除');
   }
 
   /**
@@ -403,10 +451,23 @@ class PoseStudioApp {
   openLineartModal(index) {
     if (!this.modalItems || this.modalItems.length === 0) return;
     this.currentModalIndex = Math.max(0, Math.min(index, this.modalItems.length - 1));
+    this.setModalZoom(1.0);
     this.updateModalContent();
     if (this.lineartModal) {
       this.lineartModal.style.display = 'flex';
       document.body.style.overflow = 'hidden';
+    }
+  }
+
+  setModalZoom(zoom) {
+    this.modalZoom = Math.max(1.0, Math.min(3.0, zoom));
+    if (this.modalPreviewImg) {
+      this.modalPreviewImg.style.transform = `scale(${this.modalZoom})`;
+      this.modalPreviewImg.style.transformOrigin = 'center center';
+      this.modalPreviewImg.style.cursor = this.modalZoom > 1.05 ? 'zoom-out' : 'zoom-in';
+    }
+    if (this.modalZoomLevel) {
+      this.modalZoomLevel.textContent = `${Math.round(this.modalZoom * 100)}%`;
     }
   }
 
@@ -423,6 +484,7 @@ class PoseStudioApp {
     if (nextIndex < 0) nextIndex = this.modalItems.length - 1;
     if (nextIndex >= this.modalItems.length) nextIndex = 0;
     this.currentModalIndex = nextIndex;
+    this.setModalZoom(1.0);
     this.updateModalContent();
   }
 
@@ -496,17 +558,14 @@ class PoseStudioApp {
     this.currentPreset = preset;
     this.currentPoseBadge.textContent = preset.name;
 
-    const basePrompt = preset.promptHint || 'portrait photography, realistic details, high quality';
-    if (this.viewMode === 'lineart') {
-      this.promptBox.textContent = basePrompt + ', minimalist pencil lineart, clean anatomical contour sketch, fine art drawing, black ink on white paper';
-    } else {
-      this.promptBox.textContent = basePrompt;
-    }
+    this.updatePromptText();
 
     this.photographerTipBox.textContent = preset.photographerTip || '保持自然放松的呼吸，引导模特眼神与光线产生互动。';
 
     if (preset.isCouple) {
-      this.coupleModeIndicator.style.display = 'inline-block';
+      this.coupleModeIndicator.style.display = 'flex';
+      if (this.coupleBtnPersonA) this.coupleBtnPersonA.classList.add('active');
+      if (this.coupleBtnPersonB) this.coupleBtnPersonB.classList.remove('active');
     } else {
       this.coupleModeIndicator.style.display = 'none';
     }
@@ -526,6 +585,51 @@ class PoseStudioApp {
     this.jointEditor.style.display = 'none';
   }
 
+  /**
+   * 动态智能组装生图提示词 (结合预设主词 + 真实拍摄机位 + 镜头焦段 + 画幅)
+   */
+  updatePromptText() {
+    if (!this.currentPreset) return;
+    const basePrompt = this.currentPreset.promptHint || 'portrait photography, realistic details, high quality';
+    
+    const angleMap = {
+      'front': 'front view, eye level shot',
+      'left45': 'three-quarter view, 45 degree angle',
+      'right45': 'three-quarter view, 45 degree angle',
+      'left90': 'profile view, 90 degree side angle',
+      'low': 'low angle shot, heroic perspective, dynamic view, looking up',
+      'high': 'high angle shot, overhead perspective, intimate mood, looking down',
+      'back': 'back view, looking back over shoulder'
+    };
+
+    const focalMap = {
+      28: '28mm wide angle lens, environmental portrait, street style',
+      50: '50mm prime lens, natural human eye perspective, sharp bokeh',
+      85: '85mm portrait telephoto lens, creamy bokeh, shallow depth of field, sharp facial focus'
+    };
+
+    const aspectMap = {
+      '3:4': '3:4 portrait aspect ratio',
+      '9:16': 'vertical 9:16 full-screen framing',
+      '1:1': '1:1 square framing, centered composition',
+      '2:3': '2:3 classic 35mm film format'
+    };
+
+    const angleTag = angleMap[this.currentAngle || 'front'] || '';
+    const focalTag = focalMap[this.currentFocal || 50] || '';
+    const aspectTag = aspectMap[this.cameraManager?.currentAspect || '3:4'] || '';
+
+    let fullPrompt = `${basePrompt}, ${angleTag}, ${focalTag}, ${aspectTag}`;
+
+    if (this.viewMode === 'lineart') {
+      fullPrompt += ', minimalist pencil lineart, clean anatomical contour sketch, fine art drawing, black ink on white paper, master sketch';
+    }
+
+    if (this.promptBox) {
+      this.promptBox.textContent = fullPrompt;
+    }
+  }
+
   setViewMode(mode) {
     this.viewMode = mode;
     this.skeleton.setStyleMode(mode);
@@ -537,10 +641,6 @@ class PoseStudioApp {
       this.scene.background = new THREE.Color(0xf1f5f9);
       this.gridHelper.visible = false;
       this.exportModeSelect.value = 'lineart_white';
-
-      if (this.currentPreset) {
-        this.promptBox.textContent = (this.currentPreset.promptHint || '') + ', minimalist pencil lineart, clean anatomical contour sketch, fine art drawing, black ink on white paper';
-      }
     } else {
       this.btnModeOpenPose.classList.add('active');
       this.btnModeLineart.classList.remove('active');
@@ -548,11 +648,9 @@ class PoseStudioApp {
       this.scene.background = new THREE.Color(0x0e1015);
       this.gridHelper.visible = true;
       this.exportModeSelect.value = 'bones_only';
-
-      if (this.currentPreset) {
-        this.promptBox.textContent = this.currentPreset.promptHint || '';
-      }
     }
+
+    this.updatePromptText();
   }
 
   updateAspectRatio(aspectKey) {
@@ -562,6 +660,19 @@ class PoseStudioApp {
     this.frameOverlay.style.width = `${frame.frameWidth}px`;
     this.frameOverlay.style.height = `${frame.frameHeight}px`;
     this.frameLabel.textContent = `${aspectKey} 人像取景框`;
+
+    // 自动将导出分辨率同步切换至与画幅匹配的最佳档位
+    const aspectResolutionMap = {
+      '3:4': '768x1024',
+      '9:16': '720x1280',
+      '1:1': '1024x1024',
+      '2:3': '1024x1536'
+    };
+    if (this.resSelect && aspectResolutionMap[aspectKey]) {
+      this.resSelect.value = aspectResolutionMap[aspectKey];
+    }
+
+    this.updatePromptText();
   }
 
   bindEvents() {
@@ -638,9 +749,11 @@ class PoseStudioApp {
     document.querySelectorAll('[data-angle]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const angle = e.currentTarget.dataset.angle;
+        this.currentAngle = angle;
         this.cameraManager.setAnglePreset(angle);
         document.querySelectorAll('[data-angle]').forEach(b => b.classList.remove('active'));
         e.currentTarget.classList.add('active');
+        this.updatePromptText();
       });
     });
 
@@ -648,6 +761,7 @@ class PoseStudioApp {
     document.querySelectorAll('[data-aspect]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const aspect = e.currentTarget.dataset.aspect;
+        this.currentAspect = aspect;
         this.updateAspectRatio(aspect);
         document.querySelectorAll('[data-aspect]').forEach(b => b.classList.remove('active'));
         e.currentTarget.classList.add('active');
@@ -658,9 +772,11 @@ class PoseStudioApp {
     document.querySelectorAll('[data-focal]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const mm = parseInt(e.currentTarget.dataset.focal, 10);
+        this.currentFocal = mm;
         this.cameraManager.setFocalLength(mm);
         document.querySelectorAll('[data-focal]').forEach(b => b.classList.remove('active'));
         e.currentTarget.classList.add('active');
+        this.updatePromptText();
       });
     });
 
@@ -770,6 +886,25 @@ class PoseStudioApp {
       });
     });
 
+    // 导出姿态 JSON 数据按钮
+    this.btnExportPoseJson?.addEventListener('click', () => {
+      const poseData = {
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        name: this.currentPreset?.name || 'custom_pose',
+        isCouplesMode: this.skeleton.isCouplesMode,
+        joints: this.skeleton.personA.getPoseData(),
+        jointsB: this.skeleton.isCouplesMode ? this.skeleton.personB.getPoseData() : null,
+        camera: {
+          angle: this.currentAngle || 'front',
+          focal: this.currentFocal || 50,
+          aspect: this.currentAspect || '3:4'
+        }
+      };
+      this.exporter.exportPoseJSON(poseData, `PoseStudio_${this.currentPreset?.name || 'pose'}`);
+      this.showToast('📥 姿态 3D 坐标数据 (JSON) 已导出！可在其它项目复用', 'success');
+    });
+
     // 保存自定义姿态
     document.getElementById('save-custom-btn')?.addEventListener('click', () => {
       const name = prompt('请输入新姿势名称：', '我的定制人像姿势');
@@ -795,7 +930,39 @@ class PoseStudioApp {
       this.showToast(`💾 姿势【${name}】已成功存入本地预设库！`, 'success');
     });
 
-    // 鼠标点击拾取关节
+    // 双人模式快捷控制切换
+    this.coupleBtnPersonA?.addEventListener('click', () => {
+      this.skeleton.activeEntity = this.skeleton.personA;
+      this.coupleBtnPersonA.classList.add('active');
+      this.coupleBtnPersonB.classList.remove('active');
+      this.selectJoint(0, '面部/头部', 'personA', '主模特');
+      this.showToast('👩 已切换至【主模特】进行肢体调节');
+    });
+
+    this.coupleBtnPersonB?.addEventListener('click', () => {
+      this.skeleton.activeEntity = this.skeleton.personB;
+      this.coupleBtnPersonB.classList.add('active');
+      this.coupleBtnPersonA.classList.remove('active');
+      this.selectJoint(0, '头部/视线', 'personB', '副模特/伴侣');
+      this.showToast('👨 已切换至【副模特/伴侣】进行肢体调节');
+    });
+
+    // 鼠标悬停关节反馈 (改变光标形状)
+    this.renderer.domElement.addEventListener('pointermove', (e) => {
+      const rect = this.container.getBoundingClientRect();
+      this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+
+      const jointMeshesArray = [...this.skeleton.personA.jointMeshes.values()];
+      if (this.skeleton.isCouplesMode) {
+        jointMeshesArray.push(...this.skeleton.personB.jointMeshes.values());
+      }
+      const intersects = this.raycaster.intersectObjects(jointMeshesArray, true);
+      this.renderer.domElement.style.cursor = intersects.length > 0 ? 'pointer' : 'default';
+    });
+
+    // 鼠标点击精准拾取关节 (支持大碰撞体穿透)
     this.renderer.domElement.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
 
@@ -810,14 +977,36 @@ class PoseStudioApp {
         jointMeshesArray.push(...this.skeleton.personB.jointMeshes.values());
       }
 
-      const intersects = this.raycaster.intersectObjects(jointMeshesArray);
+      const intersects = this.raycaster.intersectObjects(jointMeshesArray, true);
 
       if (intersects.length > 0) {
-        const hit = intersects[0].object;
-        const jointId = hit.userData.jointId;
-        const entityId = hit.userData.entityId;
-        const roleLabel = entityId === 'personB' ? '副模特/伴侣' : (this.skeleton.isCouplesMode ? '主模特/女' : '');
-        this.selectJoint(jointId, hit.userData.label, entityId, roleLabel);
+        let hit = intersects[0].object;
+        let jointId = hit.userData.jointId;
+        let entityId = hit.userData.entityId;
+        let label = hit.userData.label;
+
+        if (jointId === undefined && hit.parent?.userData?.jointId !== undefined) {
+          hit = hit.parent;
+          jointId = hit.userData.jointId;
+          entityId = hit.userData.entityId;
+          label = hit.userData.label;
+        }
+
+        if (jointId !== undefined) {
+          const roleLabel = entityId === 'personB' ? '副模特/伴侣' : (this.skeleton.isCouplesMode ? '主模特/女' : '');
+          this.selectJoint(jointId, label, entityId, roleLabel);
+
+          // 同步双人切换按钮的高亮
+          if (this.skeleton.isCouplesMode) {
+            if (entityId === 'personB') {
+              this.coupleBtnPersonB?.classList.add('active');
+              this.coupleBtnPersonA?.classList.remove('active');
+            } else {
+              this.coupleBtnPersonA?.classList.add('active');
+              this.coupleBtnPersonB?.classList.remove('active');
+            }
+          }
+        }
       }
     });
 
@@ -839,11 +1028,77 @@ class PoseStudioApp {
     this.sliderY.addEventListener('input', onSliderChange);
     this.sliderZ.addEventListener('input', onSliderChange);
 
+    // 关节对称镜像按钮
+    this.btnMirrorJoint?.addEventListener('click', () => {
+      if (this.skeleton.selectedJointId === null) {
+        this.showToast('⚠️ 请先在 3D 人体上点击选择一个关节点！');
+        return;
+      }
+      const oppId = this.skeleton.mirrorJoint(this.skeleton.selectedJointId);
+      if (oppId !== null) {
+        this.showToast('🪞 关节点已对称镜像到对侧！');
+      } else {
+        this.showToast('ℹ️ 该关节已位于正中轴或暂无对称点');
+      }
+    });
+
+    // 还原单个关节至初始预设
+    this.btnResetSingleJoint?.addEventListener('click', () => {
+      const jointId = this.skeleton.selectedJointId;
+      if (jointId === null) {
+        this.showToast('⚠️ 请先点击选择要复位的关节！');
+        return;
+      }
+      if (!this.currentPreset) return;
+
+      const isPersonB = this.skeleton.activeEntity === this.skeleton.personB;
+      const presetJoints = (isPersonB && this.currentPreset.jointsB)
+        ? this.currentPreset.jointsB
+        : this.currentPreset.joints;
+
+      const targetPos = presetJoints ? presetJoints[jointId] : null;
+      if (targetPos) {
+        this.skeleton.setJointPosition(jointId, targetPos.x, targetPos.y, targetPos.z);
+        this.sliderX.value = targetPos.x;
+        this.sliderY.value = targetPos.y;
+        this.sliderZ.value = targetPos.z;
+        this.valX.textContent = targetPos.x.toFixed(2);
+        this.valY.textContent = targetPos.y.toFixed(2);
+        this.valZ.textContent = targetPos.z.toFixed(2);
+        this.showToast('↺ 当前关节已恢复到初始预设位置！');
+      } else {
+        this.showToast('⚠️ 无法获取此关节的原始预设数据');
+      }
+    });
+
     // ── 大师手绘线稿 Lightbox 模态框事件 ──
     this.modalCloseBtn?.addEventListener('click', () => this.closeLineartModal());
     this.modalBackdrop?.addEventListener('click', () => this.closeLineartModal());
     this.modalPrevBtn?.addEventListener('click', () => this.navigateModal(-1));
     this.modalNextBtn?.addEventListener('click', () => this.navigateModal(1));
+
+    // Lightbox 大图缩放控制
+    this.modalZoomInBtn?.addEventListener('click', () => {
+      this.setModalZoom(this.modalZoom + 0.25);
+    });
+    this.modalZoomOutBtn?.addEventListener('click', () => {
+      this.setModalZoom(this.modalZoom - 0.25);
+    });
+    this.modalZoomResetBtn?.addEventListener('click', () => {
+      this.setModalZoom(1.0);
+    });
+
+    // 滚轮无级平滑缩放
+    this.modalImgWrapper?.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.15 : -0.15;
+      this.setModalZoom(this.modalZoom + delta);
+    }, { passive: false });
+
+    // 双击快速缩放/复原
+    this.modalPreviewImg?.addEventListener('dblclick', () => {
+      this.setModalZoom(this.modalZoom > 1.2 ? 1.0 : 2.0);
+    });
 
     // 模态框下载按钮
     this.modalDownloadBtn?.addEventListener('click', () => {
@@ -878,8 +1133,11 @@ class PoseStudioApp {
       this.closeLineartModal();
     });
 
-    // 全局键盘快捷键 (ESC关闭各弹窗, 左右键切换线稿)
+    // 全局键盘快捷键
     window.addEventListener('keydown', (e) => {
+      const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+      const isTyping = activeTag === 'input' || activeTag === 'textarea';
+
       if (e.key === 'Escape') {
         if (this.lineartModal && this.lineartModal.style.display !== 'none') {
           this.closeLineartModal();
@@ -893,6 +1151,18 @@ class PoseStudioApp {
           this.navigateModal(-1);
         } else if (e.key === 'ArrowRight') {
           this.navigateModal(1);
+        }
+      } else if (!isTyping) {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          const rotateBtn = document.getElementById('toggle-rotate-btn');
+          rotateBtn?.click();
+        } else if (e.code === 'KeyF') {
+          const resetCamBtn = document.getElementById('reset-cam-btn');
+          resetCamBtn?.click();
+          this.showToast('📷 视角已复位至正视');
+        } else if (e.code === 'KeyR') {
+          this.resetCurrentPoseBtn?.click();
         }
       }
     });

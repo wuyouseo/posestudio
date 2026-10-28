@@ -125,6 +125,19 @@ export class HumanEntity {
       this.jointMeshes.set(kp.id, mesh);
       this.group.add(mesh);
 
+      // 增加不可见的大拾取碰撞球 (半径 0.052)，极大提升 3D 空间拾取的灵敏度与容错率
+      const hitGeo = new THREE.SphereGeometry(0.052, 8, 8);
+      const hitMat = new THREE.MeshBasicMaterial({ visible: false, depthWrite: false });
+      const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+      hitMesh.userData = {
+        isJoint: true,
+        entityId: this.entityId,
+        jointId: kp.id,
+        name: kp.name,
+        label: kp.label
+      };
+      mesh.add(hitMesh);
+
       const defPos = DEFAULT_T_POSE_JOINTS[kp.id];
       const vec = new THREE.Vector3(defPos.x, defPos.y, defPos.z);
       this.currentJointPositions[kp.id] = vec.clone();
@@ -797,6 +810,34 @@ export class HumanEntity {
   setVisible(visible) {
     this.group.visible = visible;
   }
+
+  /**
+   * 将指定关节对称镜像到对侧 (如左腕镜像到右腕，或左膝对称到右膝)
+   */
+  mirrorJointToOpposite(jointId) {
+    const oppMap = {
+      2: 5, 5: 2,   // 肩
+      3: 6, 6: 3,   // 肘
+      4: 7, 7: 4,   // 腕
+      8: 11, 11: 8, // 髋
+      9: 12, 12: 9, // 膝
+      10: 13, 13: 10, // 踝
+      14: 15, 15: 14, // 眼
+      16: 17, 17: 16  // 耳
+    };
+    const oppId = oppMap[jointId];
+    const srcPos = this.currentJointPositions[jointId];
+    if (!srcPos) return null;
+
+    if (oppId !== undefined) {
+      this.setJointPosition(oppId, -srcPos.x, srcPos.y, srcPos.z);
+      return oppId;
+    } else if (jointId === 0 || jointId === 1) {
+      this.setJointPosition(jointId, 0, srcPos.y, srcPos.z);
+      return jointId;
+    }
+    return null;
+  }
 }
 
 /**
@@ -907,6 +948,10 @@ export class SkeletonModel {
 
   setJointPosition(jointId, x, y, z) {
     this.activeEntity.setJointPosition(jointId, x, y, z);
+  }
+
+  mirrorJoint(jointId) {
+    return this.activeEntity.mirrorJointToOpposite(jointId);
   }
 
   selectJoint(jointId, entityId = 'personA') {
