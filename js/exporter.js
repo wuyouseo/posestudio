@@ -35,68 +35,29 @@ export class OpenPoseExporter {
       const baseFillColor = (exportMode === 'lineart_black') ? 0x000000 : 0xffffff;
       const baseMaterial = new THREE.MeshBasicMaterial({ color: baseFillColor });
 
-      // 1. 头部
-      const headGeo = new THREE.SphereGeometry(0.105, 20, 16);
-      headGeo.scale(0.85, 1.15, 0.95);
-      const headBase = new THREE.Mesh(headGeo, baseMaterial);
-      headBase.position.copy(entity.headMesh.position);
-      headBase.quaternion.copy(entity.headMesh.quaternion);
-      headBase.scale.copy(entity.headMesh.scale);
-      exportScene.add(headBase);
+      // 遍历解剖体块轮廓组，高精度导出完整真实人体轮廓
+      if (entity.silhouetteGroup) {
+        entity.silhouetteGroup.traverse((child) => {
+          if (child.isMesh && child.visible && child.geometry) {
+            const baseMesh = new THREE.Mesh(child.geometry, baseMaterial);
+            child.getWorldPosition(baseMesh.position);
+            child.getWorldQuaternion(baseMesh.quaternion);
+            child.getWorldScale(baseMesh.scale);
+            exportScene.add(baseMesh);
 
-      const headEdges = new THREE.EdgesGeometry(headGeo);
-      const headLine = new THREE.LineSegments(headEdges, lineMaterial);
-      headLine.position.copy(entity.headMesh.position);
-      headLine.quaternion.copy(entity.headMesh.quaternion);
-      headLine.scale.copy(entity.headMesh.scale);
-      exportScene.add(headLine);
-
-      // 2. 躯干
-      const torsoGeo = new THREE.CylinderGeometry(0.13, 0.11, 1, 16);
-      const torsoBase = new THREE.Mesh(torsoGeo, baseMaterial);
-      torsoBase.position.copy(entity.torsoMesh.position);
-      torsoBase.quaternion.copy(entity.torsoMesh.quaternion);
-      torsoBase.scale.copy(entity.torsoMesh.scale);
-      exportScene.add(torsoBase);
-
-      const torsoEdges = new THREE.EdgesGeometry(torsoGeo);
-      const torsoLine = new THREE.LineSegments(torsoEdges, lineMaterial);
-      torsoLine.position.copy(entity.torsoMesh.position);
-      torsoLine.quaternion.copy(entity.torsoMesh.quaternion);
-      torsoLine.scale.copy(entity.torsoMesh.scale);
-      exportScene.add(torsoLine);
-
-      // 3. 骨盆
-      const pelvisGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.14, 16);
-      const pelvisBase = new THREE.Mesh(pelvisGeo, baseMaterial);
-      pelvisBase.position.copy(entity.pelvisMesh.position);
-      pelvisBase.quaternion.copy(entity.pelvisMesh.quaternion);
-      pelvisBase.scale.copy(entity.pelvisMesh.scale);
-      exportScene.add(pelvisBase);
-
-      const pelvisEdges = new THREE.EdgesGeometry(pelvisGeo);
-      const pelvisLine = new THREE.LineSegments(pelvisEdges, lineMaterial);
-      pelvisLine.position.copy(entity.pelvisMesh.position);
-      pelvisLine.quaternion.copy(entity.pelvisMesh.quaternion);
-      pelvisLine.scale.copy(entity.pelvisMesh.scale);
-      exportScene.add(pelvisLine);
-
-      // 4. 四肢
-      entity.limbVolumeMeshes.forEach((item) => {
-        const cylGeo = new THREE.CylinderGeometry(item.rBottom, item.rTop, 1, 14);
-        const limbBase = new THREE.Mesh(cylGeo, baseMaterial);
-        limbBase.position.copy(item.mesh.position);
-        limbBase.quaternion.copy(item.mesh.quaternion);
-        limbBase.scale.copy(item.mesh.scale);
-        exportScene.add(limbBase);
-
-        const limbEdges = new THREE.EdgesGeometry(cylGeo);
-        const limbLine = new THREE.LineSegments(limbEdges, lineMaterial);
-        limbLine.position.copy(item.mesh.position);
-        limbLine.quaternion.copy(item.mesh.quaternion);
-        limbLine.scale.copy(item.mesh.scale);
-        exportScene.add(limbLine);
-      });
+            // 关节过渡球不重复描边，避免线条杂乱；其余主要肌肉与肢体体块描摹优美素描轮廓
+            const isJointSphere = entity.jointSphereMeshes && Object.values(entity.jointSphereMeshes).some(d => d.mesh === child);
+            if (!isJointSphere) {
+              const edges = new THREE.EdgesGeometry(child.geometry);
+              const lineMesh = new THREE.LineSegments(edges, lineMaterial);
+              lineMesh.position.copy(baseMesh.position);
+              lineMesh.quaternion.copy(baseMesh.quaternion);
+              lineMesh.scale.copy(baseMesh.scale);
+              exportScene.add(lineMesh);
+            }
+          }
+        });
+      }
 
       return;
     }
@@ -105,7 +66,7 @@ export class OpenPoseExporter {
     const shouldRenderSilhouette = exportMode === 'composite' || exportMode === 'silhouette_only';
     const shouldRenderBones = exportMode === 'bones_only' || exportMode === 'composite';
 
-    if (shouldRenderSilhouette) {
+    if (shouldRenderSilhouette && entity.silhouetteGroup) {
       const silMaterial = new THREE.MeshBasicMaterial({
         color: exportMode === 'silhouette_only' ? 0xffffff : 0x718096,
         transparent: exportMode === 'composite',
@@ -113,35 +74,14 @@ export class OpenPoseExporter {
         depthWrite: exportMode === 'silhouette_only'
       });
 
-      const headGeo = new THREE.SphereGeometry(0.105, 24, 24);
-      headGeo.scale(0.85, 1.15, 0.95);
-      const headMesh = new THREE.Mesh(headGeo, silMaterial);
-      headMesh.position.copy(entity.headMesh.position);
-      headMesh.quaternion.copy(entity.headMesh.quaternion);
-      headMesh.scale.copy(entity.headMesh.scale);
-      exportScene.add(headMesh);
-
-      const torsoGeo = new THREE.CylinderGeometry(0.13, 0.11, 1, 20);
-      const torsoMesh = new THREE.Mesh(torsoGeo, silMaterial);
-      torsoMesh.position.copy(entity.torsoMesh.position);
-      torsoMesh.scale.copy(entity.torsoMesh.scale);
-      torsoMesh.quaternion.copy(entity.torsoMesh.quaternion);
-      exportScene.add(torsoMesh);
-
-      const pelvisGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.14, 18);
-      const pelvisMesh = new THREE.Mesh(pelvisGeo, silMaterial);
-      pelvisMesh.position.copy(entity.pelvisMesh.position);
-      pelvisMesh.scale.copy(entity.pelvisMesh.scale);
-      pelvisMesh.quaternion.copy(entity.pelvisMesh.quaternion);
-      exportScene.add(pelvisMesh);
-
-      entity.limbVolumeMeshes.forEach((item) => {
-        const cylGeo = new THREE.CylinderGeometry(item.rBottom, item.rTop, 1, 16);
-        const mesh = new THREE.Mesh(cylGeo, silMaterial);
-        mesh.position.copy(item.mesh.position);
-        mesh.scale.copy(item.mesh.scale);
-        mesh.quaternion.copy(item.mesh.quaternion);
-        exportScene.add(mesh);
+      entity.silhouetteGroup.traverse((child) => {
+        if (child.isMesh && child.visible && child.geometry) {
+          const mesh = new THREE.Mesh(child.geometry, silMaterial);
+          child.getWorldPosition(mesh.position);
+          child.getWorldQuaternion(mesh.quaternion);
+          child.getWorldScale(mesh.scale);
+          exportScene.add(mesh);
+        }
       });
     }
 

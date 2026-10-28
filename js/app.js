@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { SkeletonModel } from './skeleton_model.js?v=20260927_camera_fit';
-import { CameraManager } from './camera_controls.js?v=20260927_camera_fit';
-import { OpenPoseExporter } from './exporter.js?v=20260927_camera_fit';
-import { POSE_CATEGORIES, POSE_PRESETS } from './pose_presets.js?v=20260927_camera_fit';
-import { LINEART_GALLERY_DATA } from './lineart_gallery_data.js?v=20260927_camera_fit';
+import { SkeletonModel } from './skeleton_model.js?v=20261028_human_anatomy';
+import { CameraManager } from './camera_controls.js?v=20261028_human_anatomy';
+import { OpenPoseExporter } from './exporter.js?v=20261028_human_anatomy';
+import { POSE_CATEGORIES, POSE_PRESETS } from './pose_presets.js?v=20261028_human_anatomy';
+import { LINEART_GALLERY_DATA } from './lineart_gallery_data.js?v=20261028_human_anatomy';
 
 class PoseStudioApp {
   constructor() {
@@ -113,20 +113,20 @@ class PoseStudioApp {
     this.gridHelper.position.y = 0;
     this.scene.add(this.gridHelper);
 
-    // 三点式摄影棚布光
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    // 专业影楼三点式人像布光系统 (主光暖白 + 辅光冷透 + 轮廓光立体勾勒)
+    const ambientLight = new THREE.AmbientLight(0xfff7ed, 0.88);
     this.scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    keyLight.position.set(3, 4, 4);
+    const keyLight = new THREE.DirectionalLight(0xfffaf0, 1.35);
+    keyLight.position.set(2.8, 4.2, 4.0);
     this.scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.6);
-    fillLight.position.set(-3, 2, 2);
+    const fillLight = new THREE.DirectionalLight(0xbfdbfe, 0.70);
+    fillLight.position.set(-3.2, 2.2, 2.5);
     this.scene.add(fillLight);
 
-    const rimLight = new THREE.DirectionalLight(0xa855f7, 0.8);
-    rimLight.position.set(0, 3, -4);
+    const rimLight = new THREE.DirectionalLight(0xf472b6, 0.90);
+    rimLight.position.set(0, 3.2, -4.2);
     this.scene.add(rimLight);
 
     // 相机与渲染器 (50mm 镜头在 4.8m 处，完美容纳 1.76m 全身人像并具备黄金比例空间)
@@ -513,6 +513,11 @@ class PoseStudioApp {
 
     this.skeleton.applyPreset(preset, animate);
 
+    const targetProfile = preset.bodyProfile || (preset.category === 'men' ? 'male' : (preset.category === 'children' ? 'child' : 'female'));
+    document.querySelectorAll('[data-bodyprofile]').forEach(b => {
+      b.classList.toggle('active', b.dataset.bodyprofile === targetProfile);
+    });
+
     document.querySelectorAll('.preset-card').forEach(card => {
       card.classList.toggle('active', card.dataset.id === presetId);
     });
@@ -679,6 +684,17 @@ class PoseStudioApp {
       const val = parseFloat(e.target.value);
       this.skeleton.setSilhouetteOpacity(val);
       this.silhouetteVal.textContent = `${Math.round(val * 100)}%`;
+    });
+
+    // 解剖体型切换 (女性沙漏 / 男性倒三角 / 儿童可爱)
+    document.querySelectorAll('[data-bodyprofile]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const profile = e.currentTarget.dataset.bodyprofile;
+        this.skeleton.setBodyProfile(profile);
+        document.querySelectorAll('[data-bodyprofile]').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        this.showToast(`✨ 体型已切换为【${e.currentTarget.textContent.trim()}】解剖形态！`);
+      });
     });
 
     // 视口浮动按钮
