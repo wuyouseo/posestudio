@@ -7,7 +7,7 @@
 ### 专为摄影师摆姿指导与 AI 艺术创作者打造的轻量级 3D 人像姿态资产工作站
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-zishi3d.netlify.app-00C7B7?style=flat&logo=netlify&logoColor=white)](https://zishi3d.netlify.app/)
-[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](./)
+[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](./)
 [![Three.js](https://img.shields.io/badge/Three.js-0.160.0-black.svg)](https://threejs.org/)
 [![ControlNet](https://img.shields.io/badge/ControlNet-OpenPose%20%7C%20Lineart-success.svg)](https://github.com/lllyasviel/ControlNet)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./)
@@ -74,14 +74,28 @@
 - **PBR 拟真皮肤双面材质**：透光暖玉色泽，呈现自然高光反射与次表面光感。
 - **轮廓透明度自由调节**：可无级调节人体轮廓的可见性与透明度（0% ~ 100%）。
 
-### 4. 📷 真实摄影机位与画幅取景框
+### 4. 💡 专业人像摄影棚布光系统（Studio Lighting System）
+- **三点布光专业架构**：主光（Key Light，支持高精度柔和阴影）、辅光（Fill Light，光比充盈）、轮廓背光（Rim Light，发丝金边）与柔和环境光。
+- **4 款经典人像摄影光位**：
+  - **🦋 蝴蝶光（Paramount Light）**：高位对称俯照，鼻下形成小蝴蝶阴影，强化五官与颧骨立体轮廓，好莱坞大片质感。
+  - **🎨 伦勃朗光（Rembrandt Light）**：45° 侧上方光，面颊暗部形成经典倒三角光斑，充满戏剧故事感。
+  - **🌅 侧逆轮廓光（Rim Light）**：强背光勾勒发丝金边与身体外轮廓线条，极具电影纵深感。
+  - **☁️ 窗边漫射柔光（Soft Window Light）**：大面积柔化包围光，阴影过渡极其平缓，清透自然。
+- **自由交互灯光手操台**：
+  - **主光 360° 水平旋转** 与 **15°~75° 仰角升降**。
+  - **灯光色温一键切换**：`[🔥 暖光 3200K]`、`[⚪ 闪光 5500K]`、`[❄️ 冷光 6500K]`。
+  - **光比软硬调节**：控制明暗对比度（从戏剧硬光到清透柔光）。
+- **真实地面接触投影**：启用 PCFSoftShadowMap 软阴影映射，人体在地面投射真实吸光投影，彻底告别悬空感。
+
+### 5. 📷 真实摄影机位与画幅取景框
 - **经典定焦焦段**：28mm（广角街拍环境人像）、50mm（标准人文透视）、85mm（黄金空气切割人像）。
 - **人像黄金画幅**：3:4（经典杂志人像）、9:16（移动端全屏壁纸）、1:1（方形画幅 / Flux 推荐）、2:3（胶片全画幅高分），切换画幅时自动同步导出分辨率。
 - **多机位预设**：正面平视、左侧 45°、右侧 45°、90° 侧颜、仰角大长腿、微俯角情绪构图一键切换。
-- **🧠 动态智能生图提示词**：生图词条实时联动当前姿态特色、拍摄机位、镜头焦段与画幅标签，生成的英文 Prompt 契合 Midjourney 与 SDXL 实拍参数。
+- **🧠 动态智能生图提示词**：生图词条实时联动当前姿态特色、拍摄机位、镜头焦段、画幅标签与**当前摄影棚光位及色温术语**，生成的英文 Prompt 契合 Midjourney、GPT 与 SDXL 工业级出图参数。
 
-### 5. 🤖 ControlNet 多通道专业导出引擎
+### 6. 🤖 ControlNet 与 GPT 多通道专业导出引擎
 采用离屏高保真渲染器，输出绝对纯净、无杂色的参考垫图：
+- **`💡 摄影棚光影灰模: 立体明暗与投影`**：专为 **GPT / DALL-E 3 / Midjourney** 打造，包含真实受光面、明暗交界线与柔和投影，多模态 AI 一眼识别肌肉结构与光影关系！
 - **`手绘线稿: 纯白底黑线`**：Lineart / Sketch 推荐，精准黑白二值轮廓线。
 - **`手绘线稿: 纯黑底白线`**：Canny / Softedge 专用高对比边缘线。
 - **`标准 OpenPose 彩色骨骼`**：严格遵循 ControlNet 18 节点色彩标准，黑底输出。

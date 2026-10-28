@@ -293,6 +293,14 @@ export class HumanEntity {
     this.silhouetteGroup.add(this.rFootMesh);
     this.silhouetteGroup.add(this.lFootMesh);
 
+    // 开启解剖人体所有体块的摄影棚阴影投射与自遮挡阴影接收
+    this.silhouetteGroup.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+
     this.updateSilhouette();
   }
 
@@ -697,6 +705,7 @@ export class HumanEntity {
     this.silhouetteOpacity = opacity;
     if (this.silhouetteMaterial && this.styleMode !== 'lineart') {
       this.silhouetteMaterial.opacity = opacity;
+      this.silhouetteMaterial.depthWrite = opacity >= 0.85;
     }
   }
 

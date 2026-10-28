@@ -215,6 +215,57 @@
         </div>
       </div>
 
+      <!-- 3. 摄影棚布光系统 (Studio Lighting) -->
+      <div class="control-section">
+        <div class="section-title">
+          <span>摄影棚布光</span>
+          <span style="font-size: 11px; color: #f59e0b;">💡 经典光位</span>
+        </div>
+
+        <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">经典人像光位预设</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;" id="lighting-preset-selector">
+          <button class="opt-btn active" data-lightpreset="paramount">🦋 蝴蝶光 (高贵)</button>
+          <button class="opt-btn" data-lightpreset="rembrandt">🎨 伦勃朗光 (油画)</button>
+          <button class="opt-btn" data-lightpreset="rim">🌅 侧逆轮廓 (电影)</button>
+          <button class="opt-btn" data-lightpreset="soft_window">☁️ 窗边柔光 (清新)</button>
+        </div>
+
+        <!-- 主光水平方位角与仰角 -->
+        <div class="slider-group" style="margin-top: 10px;">
+          <div class="slider-header">
+            <span>主光水平方位角</span>
+            <span id="light-azimuth-val">0° (正前方)</span>
+          </div>
+          <input type="range" class="custom-range" id="light-azimuth-slider" min="0" max="360" step="5" value="0">
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span>主光俯仰高度</span>
+            <span id="light-elevation-val">55°</span>
+          </div>
+          <input type="range" class="custom-range" id="light-elevation-slider" min="15" max="75" step="1" value="55">
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <span>光比 / 辅光充盈</span>
+            <span id="light-fill-val">35%</span>
+          </div>
+          <input type="range" class="custom-range" id="light-fill-slider" min="0.1" max="0.9" step="0.05" value="0.35">
+        </div>
+
+        <!-- 色温切换 -->
+        <div style="margin-top: 8px;">
+          <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">灯光色温氛围</div>
+          <div class="btn-grid-3" id="light-temp-selector">
+            <button class="opt-btn" data-lighttemp="warm">🔥 暖调 3200K</button>
+            <button class="opt-btn active" data-lighttemp="white">⚪ 闪光 5500K</button>
+            <button class="opt-btn" data-lighttemp="cool">❄️ 冷光 6500K</button>
+          </div>
+        </div>
+      </div>
+
       <!-- 3. 关节微调面板 -->
       <div class="control-section" id="joint-editor" style="display: none;">
         <div class="section-title">
@@ -270,6 +321,9 @@
         <div>
           <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">导出图像模式</div>
           <select id="export-mode-select" class="opt-btn" style="width: 100%; text-align: left; padding: 8px 10px;">
+            <optgroup label="── 💡 摄影棚光影 / GPT生图参考 ──">
+              <option value="studio_clay">摄影棚光影灰模: 立体明暗与投影 (GPT/Midjourney 强烈推荐)</option>
+            </optgroup>
             <optgroup label="── ✏️ ControlNet Lineart 线稿 ──">
               <option value="lineart_white">手绘线稿: 纯白底黑线 (Lineart / Sketch 推荐)</option>
               <option value="lineart_black">手绘线稿: 纯黑底白线 (Canny / Softedge 专用)</option>

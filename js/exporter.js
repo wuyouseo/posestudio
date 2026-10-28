@@ -7,12 +7,14 @@ export class OpenPoseExporter {
    * @param {THREE.Scene} scene
    * @param {THREE.Camera} camera
    * @param {import('./skeleton_model.js').SkeletonModel} skeletonModel
+   * @param {import('./lighting_manager.js').StudioLightingManager} [lightingManager]
    */
-  constructor(renderer, scene, camera, skeletonModel) {
+  constructor(renderer, scene, camera, skeletonModel, lightingManager = null) {
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;
     this.skeletonModel = skeletonModel;
+    this.lightingManager = lightingManager;
   }
 
   /**
@@ -22,6 +24,31 @@ export class OpenPoseExporter {
     if (!entity || !entity.group.visible) return;
 
     const upVector = new THREE.Vector3(0, 1, 0);
+
+    // 1. 摄影棚光影灰模渲染 (专为 GPT / Midjourney 读懂立体体积与受光方向设计)
+    if (exportMode === 'studio_clay') {
+      const clayMaterial = new THREE.MeshStandardMaterial({
+        color: 0xededed, // 优雅纯正素描石膏灰
+        roughness: 0.38, // 真实皮肤般柔和高光
+        metalness: 0.02,
+        side: THREE.DoubleSide
+      });
+
+      if (entity.silhouetteGroup) {
+        entity.silhouetteGroup.traverse((child) => {
+          if (child.isMesh && child.visible && child.geometry) {
+            const mesh = new THREE.Mesh(child.geometry, clayMaterial);
+            child.getWorldPosition(mesh.position);
+            child.getWorldQuaternion(mesh.quaternion);
+            child.getWorldScale(mesh.scale);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            exportScene.add(mesh);
+          }
+        });
+      }
+      return;
+    }
 
     // 判断线稿模式
     const isLineartMode = exportMode.startsWith('lineart');
@@ -134,12 +161,51 @@ export class OpenPoseExporter {
     const exportScene = new THREE.Scene();
 
     // 背景色处理
-    if (exportMode === 'lineart_white') {
+    if (exportMode === 'studio_clay') {
+      exportScene.background = transparent ? null : new THREE.Color(0x181a20);
+    } else if (exportMode === 'lineart_white') {
       exportScene.background = transparent ? null : new THREE.Color(0xffffff);
     } else if (exportMode === 'lineart_black') {
       exportScene.background = transparent ? null : new THREE.Color(0x000000);
     } else {
       exportScene.background = transparent ? null : new THREE.Color(0x000000);
+    }
+
+    // 若为摄影棚光影灰模模式，克隆当前摄影棚完整三点布光系统与地面阴影
+    if (exportMode === 'studio_clay' && this.lightingManager) {
+      const amb = new THREE.AmbientLight(this.lightingManager.ambientLight.color, this.lightingManager.ambientLight.intensity);
+      exportScene.add(amb);
+
+      const key = new THREE.DirectionalLight(this.lightingManager.keyLight.color, this.lightingManager.keyLight.intensity);
+      key.position.copy(this.lightingManager.keyLight.position);
+      key.castShadow = true;
+      key.shadow.mapSize.width = 2048;
+      key.shadow.mapSize.height = 2048;
+      key.shadow.bias = -0.0005;
+      exportScene.add(key);
+      exportScene.add(key.target);
+      key.target.position.set(0, 0.95, 0);
+
+      const fill = new THREE.DirectionalLight(this.lightingManager.fillLight.color, this.lightingManager.fillLight.intensity);
+      fill.position.copy(this.lightingManager.fillLight.position);
+      exportScene.add(fill);
+      exportScene.add(fill.target);
+      fill.target.position.set(0, 0.95, 0);
+
+      const rim = new THREE.DirectionalLight(this.lightingManager.rimLight.color, this.lightingManager.rimLight.intensity);
+      rim.position.copy(this.lightingManager.rimLight.position);
+      exportScene.add(rim);
+      exportScene.add(rim.target);
+      rim.target.position.set(0, 0.95, 0);
+
+      // 地面阴影接收
+      const shadowPlaneGeo = new THREE.PlaneGeometry(8, 8);
+      const shadowPlaneMat = new THREE.ShadowMaterial({ opacity: 0.45 });
+      const shadowPlane = new THREE.Mesh(shadowPlaneGeo, shadowPlaneMat);
+      shadowPlane.rotation.x = -Math.PI / 2;
+      shadowPlane.position.y = -0.005;
+      shadowPlane.receiveShadow = true;
+      exportScene.add(shadowPlane);
     }
 
     const exportCamera = this.camera.clone();
@@ -193,7 +259,9 @@ export class OpenPoseExporter {
       const sanitizedName = poseName.replace(/\s+/g, '_');
       
       let modeSuffix = 'OpenPose';
-      if (exportMode.startsWith('lineart')) {
+      if (exportMode === 'studio_clay') {
+        modeSuffix = 'Studio_Clay_Lighting';
+      } else if (exportMode.startsWith('lineart')) {
         modeSuffix = 'Lineart_Sketch';
       } else if (exportMode === 'composite') {
         modeSuffix = 'Pose_Silhouette';

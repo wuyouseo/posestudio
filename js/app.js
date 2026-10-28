@@ -5,6 +5,7 @@ import { CameraManager } from './camera_controls.js?v=20261028_human_anatomy';
 import { OpenPoseExporter } from './exporter.js?v=20261028_human_anatomy';
 import { POSE_CATEGORIES, POSE_PRESETS } from './pose_presets.js?v=20261028_human_anatomy';
 import { LINEART_GALLERY_DATA } from './lineart_gallery_data.js?v=20261028_human_anatomy';
+import { StudioLightingManager, LIGHTING_PRESETS, COLOR_TEMP_PRESETS } from './lighting_manager.js?v=20261028_studio_lighting';
 
 class PoseStudioApp {
   constructor() {
@@ -122,6 +123,14 @@ class PoseStudioApp {
     // 双人模式快捷切换
     this.coupleBtnPersonA = document.getElementById('couple-btn-personA');
     this.coupleBtnPersonB = document.getElementById('couple-btn-personB');
+
+    // 摄影棚布光系统 DOM 缓存
+    this.lightAzimuthSlider = document.getElementById('light-azimuth-slider');
+    this.lightAzimuthVal = document.getElementById('light-azimuth-val');
+    this.lightElevationSlider = document.getElementById('light-elevation-slider');
+    this.lightElevationVal = document.getElementById('light-elevation-val');
+    this.lightFillSlider = document.getElementById('light-fill-slider');
+    this.lightFillVal = document.getElementById('light-fill-val');
   }
 
   initThree() {
@@ -133,21 +142,17 @@ class PoseStudioApp {
     this.gridHelper.position.y = 0;
     this.scene.add(this.gridHelper);
 
-    // 专业影楼三点式人像布光系统 (主光暖白 + 辅光冷透 + 轮廓光立体勾勒)
-    const ambientLight = new THREE.AmbientLight(0xfff7ed, 0.88);
-    this.scene.add(ambientLight);
+    // 摄影棚柔和吸光地面 (接收人像落脚真实投影)
+    const shadowPlaneGeo = new THREE.PlaneGeometry(8, 8);
+    const shadowPlaneMat = new THREE.ShadowMaterial({ opacity: 0.38 });
+    this.shadowPlane = new THREE.Mesh(shadowPlaneGeo, shadowPlaneMat);
+    this.shadowPlane.rotation.x = -Math.PI / 2;
+    this.shadowPlane.position.y = -0.005;
+    this.shadowPlane.receiveShadow = true;
+    this.scene.add(this.shadowPlane);
 
-    const keyLight = new THREE.DirectionalLight(0xfffaf0, 1.35);
-    keyLight.position.set(2.8, 4.2, 4.0);
-    this.scene.add(keyLight);
-
-    const fillLight = new THREE.DirectionalLight(0xbfdbfe, 0.70);
-    fillLight.position.set(-3.2, 2.2, 2.5);
-    this.scene.add(fillLight);
-
-    const rimLight = new THREE.DirectionalLight(0xf472b6, 0.90);
-    rimLight.position.set(0, 3.2, -4.2);
-    this.scene.add(rimLight);
+    // 摄影棚专业布光系统 (三点布光 + 4大经典光位 + 自由色温与光比)
+    this.lightingManager = new StudioLightingManager(this.scene);
 
     // 相机与渲染器 (50mm 镜头在 4.8m 处，完美容纳 1.76m 全身人像并具备黄金比例空间)
     const rect = this.container.getBoundingClientRect();
@@ -157,6 +162,8 @@ class PoseStudioApp {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     this.renderer.setSize(rect.width, rect.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.container.appendChild(this.renderer.domElement);
 
     // 轨道控制 (目标设在人体几何中心 y=0.90m)
@@ -169,9 +176,9 @@ class PoseStudioApp {
     // 骨骼与立体轮廓模型系统
     this.skeleton = new SkeletonModel(this.scene);
 
-    // 相机与导出管理器
+    // 相机与导出管理器 (传入 lightingManager 以供光影灰模渲染)
     this.cameraManager = new CameraManager(this.camera, this.controls, this.container);
-    this.exporter = new OpenPoseExporter(this.renderer, this.scene, this.camera, this.skeleton);
+    this.exporter = new OpenPoseExporter(this.renderer, this.scene, this.camera, this.skeleton, this.lightingManager);
 
     // 射线拾取
     this.raycaster = new THREE.Raycaster();
@@ -618,8 +625,9 @@ class PoseStudioApp {
     const angleTag = angleMap[this.currentAngle || 'front'] || '';
     const focalTag = focalMap[this.currentFocal || 50] || '';
     const aspectTag = aspectMap[this.cameraManager?.currentAspect || '3:4'] || '';
+    const lightTag = this.lightingManager ? this.lightingManager.getPromptSnippet() : '';
 
-    let fullPrompt = `${basePrompt}, ${angleTag}, ${focalTag}, ${aspectTag}`;
+    let fullPrompt = `${basePrompt}, ${angleTag}, ${focalTag}, ${aspectTag}, ${lightTag}`;
 
     if (this.viewMode === 'lineart') {
       fullPrompt += ', minimalist pencil lineart, clean anatomical contour sketch, fine art drawing, black ink on white paper, master sketch';
@@ -813,6 +821,85 @@ class PoseStudioApp {
       });
     });
 
+    // ── 摄影棚布光系统事件 ──
+    // 1. 经典光位预设切换
+    document.querySelectorAll('[data-lightpreset]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const presetKey = e.currentTarget.dataset.lightpreset;
+        this.lightingManager.applyPreset(presetKey);
+        
+        document.querySelectorAll('[data-lightpreset]').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+
+        // 同步滑块
+        if (this.lightAzimuthSlider) {
+          this.lightAzimuthSlider.value = this.lightingManager.azimuth;
+          let dirDesc = '';
+          if (this.lightingManager.azimuth === 0 || this.lightingManager.azimuth === 360) dirDesc = ' (正前方)';
+          else if (this.lightingManager.azimuth === 90) dirDesc = ' (右侧)';
+          else if (this.lightingManager.azimuth === 180) dirDesc = ' (正后方逆光)';
+          else if (this.lightingManager.azimuth === 270) dirDesc = ' (左侧)';
+          this.lightAzimuthVal.textContent = `${this.lightingManager.azimuth}°${dirDesc}`;
+        }
+        if (this.lightElevationSlider) {
+          this.lightElevationSlider.value = this.lightingManager.elevation;
+          this.lightElevationVal.textContent = `${this.lightingManager.elevation}°`;
+        }
+        if (this.lightFillSlider) {
+          this.lightFillSlider.value = this.lightingManager.fillRatio;
+          this.lightFillVal.textContent = `${Math.round(this.lightingManager.fillRatio * 100)}%`;
+        }
+
+        const presetInfo = LIGHTING_PRESETS[presetKey];
+        this.showToast(`💡 已应用经典人像布光【${presetInfo ? presetInfo.name : presetKey}】！`);
+        this.updatePromptText();
+      });
+    });
+
+    // 2. 主光水平方位角调节
+    this.lightAzimuthSlider?.addEventListener('input', (e) => {
+      const deg = parseInt(e.target.value, 10);
+      this.lightingManager.setAzimuth(deg);
+      let dirDesc = '';
+      if (deg === 0 || deg === 360) dirDesc = ' (正前方)';
+      else if (deg === 90) dirDesc = ' (右侧)';
+      else if (deg === 180) dirDesc = ' (正后方逆光)';
+      else if (deg === 270) dirDesc = ' (左侧)';
+      this.lightAzimuthVal.textContent = `${deg}°${dirDesc}`;
+      this.updatePromptText();
+    });
+
+    // 3. 主光俯仰高度调节
+    this.lightElevationSlider?.addEventListener('input', (e) => {
+      const deg = parseInt(e.target.value, 10);
+      this.lightingManager.setElevation(deg);
+      this.lightElevationVal.textContent = `${deg}°`;
+      this.updatePromptText();
+    });
+
+    // 4. 光比充盈调节
+    this.lightFillSlider?.addEventListener('input', (e) => {
+      const ratio = parseFloat(e.target.value);
+      this.lightingManager.setFillRatio(ratio);
+      this.lightFillVal.textContent = `${Math.round(ratio * 100)}%`;
+      this.updatePromptText();
+    });
+
+    // 5. 色温预设切换
+    document.querySelectorAll('[data-lighttemp]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const tempKey = e.currentTarget.dataset.lighttemp;
+        this.lightingManager.setColorTemp(tempKey);
+
+        document.querySelectorAll('[data-lighttemp]').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+
+        const tempInfo = COLOR_TEMP_PRESETS[tempKey];
+        this.showToast(`✨ 灯光色温已切换为【${tempInfo ? tempInfo.name : tempKey}】！`);
+        this.updatePromptText();
+      });
+    });
+
     // 视口浮动按钮
     document.getElementById('toggle-grid-btn')?.addEventListener('click', (e) => {
       this.gridHelper.visible = !this.gridHelper.visible;
@@ -866,6 +953,13 @@ class PoseStudioApp {
       });
     });
 
+    // 导出模式变更提示
+    this.exportModeSelect.addEventListener('change', (e) => {
+      if (e.target.value === 'studio_clay') {
+        this.showToast('💡 已切换为【摄影棚光影灰模】模式！带高精度明暗与柔和阴影，推荐发给 GPT 参考生图');
+      }
+    });
+
     // 导出姿态图按钮
     this.exportBtn.addEventListener('click', () => {
       const [wStr, hStr] = this.resSelect.value.split('x');
@@ -875,7 +969,11 @@ class PoseStudioApp {
       const exportMode = this.exportModeSelect.value;
       const poseName = this.currentPreset?.name || 'custom_pose';
 
-      this.showToast('⬇️ 正在导出 ControlNet 姿态图 (PNG)，请稍候...');
+      if (exportMode === 'studio_clay') {
+        this.showToast('💡 正在离屏渲染摄影棚光影灰模 (PNG)，请稍候...');
+      } else {
+        this.showToast('⬇️ 正在导出 ControlNet 姿态图 (PNG)，请稍候...');
+      }
 
       this.exporter.exportOpenPoseImage({
         width,
